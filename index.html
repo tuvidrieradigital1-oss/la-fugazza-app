@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>La Fugazza - Menú</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+
+    <div class="header">
+        <div class="subtitle">PIZZERÍA</div>
+        <h1>La Fugazza</h1>
+        <div class="table-badge" id="table-info">Mesa 1</div>
+    </div>
+
+    <div class="tabs" id="category-tabs">
+        <button class="tab active" onclick="filterMenu('Pizzas Tradicionales', this)">Pizzas Tradicionales</button>
+        <button class="tab" onclick="filterMenu('Pizzas Especiales', this)">Pizzas Especiales</button>
+        <button class="tab" onclick="filterMenu('Empanadas', this)">Empanadas</button>
+        <button class="tab" onclick="filterMenu('Bebidas', this)">Bebidas</button>
+        <button class="tab" onclick="filterMenu('Postres', this)">Postres</button>
+    </div>
+
+    <div class="menu-grid" id="menu-container">
+        <p style="text-align: center; color: #999; padding: 20px;">Cargando menú...</p>
+    </div>
+
+    <!-- CARRITO FLOTANTE -->
+    <div class="cart-badge" id="cart-badge" onclick="openCart()">0</div>
+
+    <!-- MODAL CARRITO -->
+    <div class="modal-overlay" id="cart-modal">
+        <div class="modal">
+            <h2>🛒 Tu pedido</h2>
+            <div id="cart-items"></div>
+            <div class="cart-total">
+                <span>Total:</span>
+                <span id="cart-total-amount">$0</span>
+            </div>
+            <select id="payment-method">
+                <option value="Efectivo">💵 Efectivo</option>
+                <option value="Tarjeta">💳 Tarjeta</option>
+                <option value="MercadoPago">📱 MercadoPago</option>
+            </select>
+            <button class="btn-primary" onclick="confirmOrder()">✅ Confirmar pedido</button>
+            <button class="btn-close" onclick="closeCart()">Seguir pidiendo</button>
+        </div>
+    </div>
+
+    <!-- MODAL ÉXITO -->
+    <div class="modal-overlay" id="success-modal">
+        <div class="modal" style="text-align: center;">
+            <h2>🎉 ¡Pedido confirmado!</h2>
+            <p>Tu pedido ya está en cocina. Podés seguir pidiendo.</p>
+            <button class="btn-primary" onclick="closeSuccess()">Perfecto</button>
+        </div>
+    </div>
+
+    <div class="footer">
+        <button class="btn-footer btn-call" onclick="callWaiter('call')">🖐 Llamar al Mozo</button>
+        <button class="btn-footer btn-bill" onclick="callWaiter('bill')">🧾 Pedir la Cuenta</button>
+    </div>
+
+    <div class="footer-text">
+        App realizada por Vidriera Digital Buenos Aires Argentina<br>
+        Todos los derechos reservados 2026.
+    </div>
+
+    <script src="js/supabaseClient.js"></script>
+    <script src="js/client.js"></script>
+</body>
+</html>
