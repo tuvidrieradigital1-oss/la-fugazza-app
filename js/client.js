@@ -9,17 +9,11 @@ const customerName = urlParams.get('name') || 'Cliente Invitado';
 let cart = [];
 let currentCategory = 'Pizzas Tradicionales';
 
-// ============================================
-// INICIALIZACIÓN
-// ============================================
 document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('table-info').innerText = `Mesa ${tableId} - ${customerName}`;
     loadMenu(currentCategory);
 });
 
-// ============================================
-// CARGAR MENÚ
-// ============================================
 async function loadMenu(category) {
     currentCategory = category;
     const container = document.getElementById('menu-container');
@@ -49,18 +43,13 @@ async function loadMenu(category) {
     `).join('');
 }
 
-// ============================================
-// FILTRAR CATEGORÍA
-// ============================================
 function filterMenu(category, btn) {
     document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
     if (btn) btn.classList.add('active');
     loadMenu(category);
 }
 
-// ============================================
 // CARRITO
-// ============================================
 function addToCart(id, name, price) {
     const existing = cart.find(i => i.id === id);
     if (existing) {
@@ -77,10 +66,10 @@ function updateCartBadge() {
     const totalItems = cart.reduce((sum, i) => sum + i.quantity, 0);
     if (totalItems > 0) {
         badge.classList.add('visible');
-        // Cambiar a elipse con texto "Su pedido (X)"
-        badge.innerText = `Su pedido (${totalItems})`;
+        badge.innerText = `Su pedido (${totalItems})`; // Texto en la elipse
     } else {
         badge.classList.remove('visible');
+    }
 }
 
 function openCart() {
@@ -97,9 +86,7 @@ function openCart() {
                     <strong>${i.name}</strong><br>
                     <small>${i.quantity} x $${Number(i.price).toLocaleString('es-AR')}</small>
                 </div>
-                <div>
-                    <strong>$${(i.price * i.quantity).toLocaleString('es-AR')}</strong>
-                </div>
+                <div><strong>$${(i.price * i.quantity).toLocaleString('es-AR')}</strong></div>
             </div>
         `).join('');
     }
@@ -109,102 +96,41 @@ function openCart() {
     modal.classList.add('active');
 }
 
-function closeCart() {
-    document.getElementById('cart-modal').classList.remove('active');
-}
+function closeCart() { document.getElementById('cart-modal').classList.remove('active'); }
 
-// ============================================
-// CONFIRMAR PEDIDO
-// ============================================
+// CONFIRMAR PEDIDO Y ESCUCHAR ESTADO
 async function confirmOrder() {
-    if (cart.length === 0) {
-        alert('El carrito está vacío');
-        return;
-    }
+    if (cart.length === 0) { alert('El carrito está vacío'); return; }
 
     const paymentMethod = document.getElementById('payment-method').value;
     const total = cart.reduce((sum, i) => sum + (i.price * i.quantity), 0);
 
-    // 1. Insertar pedido principal
     const { data: orderData, error: orderError } = await supabaseClient
         .from('orders')
-        .insert({
-            restaurant_id: restaurantId,
-            table_id: tableId,
-            customer_name: customerName,
-            payment_method: paymentMethod,
-            status: 'Pendiente',
-            total: total
-        })
-        .select()
-        .single();
+        .insert({ restaurant_id: restaurantId, table_id: tableId, customer_name: customerName, payment_method: paymentMethod, status: 'Pendiente', total: total })
+        .select().single();
 
-    if (orderError) {
-        alert('Error al crear pedido: ' + orderError.message);
-        return;
-    }
+    if (orderError) { alert('Error al crear pedido: ' + orderError.message); return; }
 
-    // 2. Insertar items del pedido
     const items = cart.map(i => ({
-        order_id: orderData.id,
-        menu_item_id: i.id,
-        item_name: i.name,
-        quantity: i.quantity,
-        unit_price: i.price,
-        status: 'Pendiente'
+        order_id: orderData.id, menu_item_id: i.id, item_name: i.name, quantity: i.quantity, unit_price: i.price, status: 'Pendiente'
     }));
 
-    const { error: itemsError } = await supabaseClient
-        .from('order_items')
-        .insert(items);
+    const { error: itemsError } = await supabaseClient.from('order_items').insert(items);
+    if (itemsError) { alert('Error al agregar items: ' + itemsError.message); return; }
 
-    if (itemsError) {
-        alert('Error al agregar items: ' + itemsError.message);
-        return;
-    }
+    // Iniciar escucha del estado de este pedido en tiempo real
+    escucharEstadoPedido(orderData.id);
 
-    // 3. Éxito
     cart = [];
     updateCartBadge();
     closeCart();
     document.getElementById('success-modal').classList.add('active');
 }
 
-function closeSuccess() {
-    document.getElementById('success-modal').classList.remove('active');
-}
+function closeSuccess() { document.getElementById('success-modal').classList.remove('active'); }
 
-// ============================================
-// NOTIFICAR AL MOZO
-// ============================================
-async function callWaiter(action) {
-    const message = action === 'call' ? 'Mozo solicitado' : 'Cuenta solicitada';
-    await supabaseClient
-        .from('notifications')
-        .insert({
-            restaurant_id: restaurantId,
-            table_id: tableId,
-            type: action,
-            message: message
-        });
-    showToast(`🔔 ${message}`);
-}
-
-// ============================================
-// TOAST (notificación breve)
-// ============================================
-function showToast(message) {
-    const toast = document.createElement('div');
-    toast.style.cssText = `
-        position: fixed; bottom: 140px; left: 50%; transform: translateX(-50%);
-        background: #333; color: white; padding: 10px 20px; border-radius: 20px;
-        font-size: 14px; z-index: 999; animation: fadeIn 0.3s;
-    `;
-    toast.innerText = message;
-    document.body.appendChild(toast);
-    setTimeout(() => toast.remove(), 2000);
-}
-// Agrega esta función para escuchar el cambio de estado
+// ALARMA CUANDO ESTÁ LISTO
 function escucharEstadoPedido(orderId) {
     supabaseClient
         .channel('cliente-' + orderId)
@@ -212,24 +138,34 @@ function escucharEstadoPedido(orderId) {
             { event: 'UPDATE', schema: 'public', table: 'orders', filter: `id=eq.${orderId}` }, 
             (payload) => {
                 if (payload.new.status === 'Listo') {
-                    // Mostrar cartel y sonar alarma
                     const banner = document.createElement('div');
                     banner.className = 'order-ready-banner';
-                    banner.innerText = '🚨 ¡Tu pedido está listo! 🚨';
+                    banner.innerHTML = '🚨 ¡Tu pedido está listo! 🚨<br><small>El mozo lo está llevando a tu mesa.</small>';
                     document.body.appendChild(banner);
                     banner.style.display = 'block';
                     
-                    // Sonido (asegúrate de tener un archivo alert.mp3 en assets o usa un link externo)
+                    // Sonido de alarma (Usa un link público para el demo)
                     const audio = new Audio('https://actions.google.com/sounds/v1/alarms/beep_short.ogg');
-                    audio.play();
+                    audio.play().catch(e => console.log("Audio bloqueado por el navegador hasta que haya interacción."));
                     
-                    setTimeout(() => banner.remove(), 8000);
+                    setTimeout(() => banner.remove(), 10000);
                 }
             }
         )
         .subscribe();
 }
 
-// Modifica la función confirmOrder para llamar a escucharEstadoPedido
-// ... dentro de confirmOrder, después de insertar el pedido:
-// escucharEstadoPedido(orderData.id);
+// NOTIFICAR AL MOZO
+async function callWaiter(action) {
+    const message = action === 'call' ? 'Mozo solicitado' : 'Cuenta solicitada';
+    await supabaseClient.from('notifications').insert({ restaurant_id: restaurantId, table_id: tableId, type: action, message: message });
+    showToast(`🔔 ${message}`);
+}
+
+function showToast(message) {
+    const toast = document.createElement('div');
+    toast.style.cssText = `position: fixed; bottom: 140px; left: 50%; transform: translateX(-50%); background: #333; color: white; padding: 10px 20px; border-radius: 20px; font-size: 14px; z-index: 999;`;
+    toast.innerText = message;
+    document.body.appendChild(toast);
+    setTimeout(() => toast.remove(), 2000);
+}
