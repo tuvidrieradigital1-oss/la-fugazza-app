@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Generador de QR - La Fugazza</title>
+    <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+    <style>
+        body { font-family: sans-serif; text-align: center; background: #FDF6E3; padding: 20px; }
+        .qr-container { display: flex; flex-wrap: wrap; justify-content: center; gap: 20px; }
+        .qr-card { background: white; padding: 15px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); width: 200px; }
+        h2 { margin: 5px 0; color: #B22222; }
+        p { font-size: 12px; color: #666; word-break: break-all; }
+    </style>
+</head>
+<body>
+    <h1>Generador de QR - La Fugazza</h1>
+    <p>Imprime esta página o guarda cada imagen.</p>
+    <div class="qr-container" id="contenedor"></div>
+
+    <script>
+        const baseUrl = "https://la-fugazza-hna769gkd-tuvidrieradigital1.vercel.app/";
+        const restaurantId = 1;
+        const contenedor = document.getElementById('contenedor');
+
+        for (let i = 1; i <= 10; i++) {
+            // El nombre es dinámico, pero el mesero o el sistema puede cambiarlo luego.
+            const url = `${baseUrl}?restaurant=${restaurantId}&table=${i}&name=Cliente_Mesa_${i}`;
+            
+            const card = document.createElement('div');
+            card.className = 'qr-card';
+            
+            const title = document.createElement('h2');
+            title.innerText = `Mesa ${i}`;
+            
+            const qrDiv = document.createElement('div');
+            qrDiv.id = `qr-${i}`;
+            qrDiv.style.display = 'flex';
+            qrDiv.style.justifyContent = 'center';
+
+            const text = document.createElement('p');
+            text.innerText = url;
+
+            card.appendChild(title);
+            card.appendChild(qrDiv);
+            card.appendChild(text);
+            contenedor.appendChild(card);
+
+            // Generar el QR
+            new QRCode(qrDiv, {
+                text: url,
+                width: 150,
+                height: 150,
+                colorDark : "#000000",
+                colorLight : "#ffffff",
+                correctLevel : QRCode.CorrectLevel.H
+            });
+        }
+    </script>
+</body>
+</html>
