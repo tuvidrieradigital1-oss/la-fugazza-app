@@ -3,14 +3,11 @@
 // ============================================
 let currentRestaurantId = 1;
 let realtimeChannel = null;
+let notificationsChannel = null;
 
-// ============================================
-// LOGIN (Mock - solo demo)
-// ============================================
 function login() {
     const email = document.getElementById('email').value;
     const pass = document.getElementById('password').value;
-    
     if (email === 'tuvidrieradigital1@gmail.com' && pass === 'clave1234') {
         document.getElementById('login-screen').style.display = 'none';
         document.getElementById('dashboard').style.display = 'block';
@@ -22,33 +19,21 @@ function login() {
 
 function logout() {
     if (realtimeChannel) supabaseClient.removeChannel(realtimeChannel);
+    if (notificationsChannel) supabaseClient.removeChannel(notificationsChannel);
     document.getElementById('login-screen').style.display = 'block';
     document.getElementById('dashboard').style.display = 'none';
 }
 
-// ============================================
-// INIT ADMIN
-// ============================================
 function initAdmin() {
     loadOrders();
     subscribeToOrders();
+    subscribeToNotifications();
 }
-// Agrega esto en initAdmin()
-function initAdmin() {
-    loadOrders();
-    subscribeToOrders();
-    subscribeToNotifications(); // Nueva función
-}
-// ============================================
-// CARGAR PEDIDOS
-// ============================================
+
 async function loadOrders() {
     const { data, error } = await supabaseClient
         .from('orders')
-        .select(`
-            *,
-            order_items (*)
-        `)
+        .select(`*, order_items (*)`)
         .eq('restaurant_id', currentRestaurantId)
         .order('created_at', { ascending: false });
 
@@ -74,53 +59,45 @@ async function loadOrders() {
                 ${order.status === 'Pendiente' ? `<button class="btn-status btn-cook" onclick="updateOrderStatus(${order.id}, 'En Cocina')">▶ En Cocina</button>` : ''}
                 ${order.status === 'En Cocina' ? `<button class="btn-status btn-ready" onclick="updateOrderStatus(${order.id}, 'Listo')">✅ Listo</button>` : ''}
                 ${order.status === 'Listo' ? `<button class="btn-status btn-deliver" onclick="updateOrderStatus(${order.id}, 'Entregado')">📦 Entregado</button>` : ''}
-                <span style="float: right; font-size: 12px; padding: 6px; background: #eee; border-radius: 6px;">
-                    Estado: <strong>${order.status}</strong>
-                </span>
+                <span style="float: right; font-size: 12px; padding: 6px; background: #eee; border-radius: 6px;">Estado: <strong>${order.status}</strong></span>
             </div>
         </div>
     `).join('');
 }
 
-// ============================================
-// ACTUALIZAR ESTADO
-// ============================================
 async function updateOrderStatus(orderId, newStatus) {
-    await supabaseClient
-        .from('orders')
-        .update({ status: newStatus })
-        .eq('id', orderId);
+    await supabaseClient.from('orders').update({ status: newStatus }).eq('id', orderId);
     loadOrders();
 }
 
-// ============================================
-// REALTIME
-// ============================================
 function subscribeToOrders() {
     realtimeChannel = supabaseClient
         .channel('orders-realtime')
-        .on('postgres_changes', 
-            { event: '*', schema: 'public', table: 'orders' }, 
-            (payload) => {
-                console.log('Cambio en pedidos:', payload);
-                loadOrders();
-            }
-        )
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, (payload) => {
+            loadOrders();
+        })
         .subscribe();
 }
 
-// ============================================
+// ALARMA PARA EL ADMIN CUANDO LLAMAN AL MOZO
+function subscribeToNotifications() {
+    notificationsChannel = supabaseClient
+        .channel('notificaciones-mozo')
+        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'notifications' }, (payload) => {
+            if (payload.new.restaurant_id == currentRestaurantId) {
+                const audio = new Audio('https://actions.google.com/sounds/v1/alarms/beep_short.ogg');
+                audio.play().catch(e => console.log("Audio bloqueado."));
+                alert(`🔔 ATENCIÓN: ${payload.new.message} en la Mesa ${payload.new.table_id}`);
+            }
+        })
+        .subscribe();
+}
+
 // MESAS
-// ============================================
 async function loadTables() {
     const { data, error } = await supabaseClient
-        .from('orders')
-        .select(`
-            *,
-            order_items (*)
-        `)
-        .eq('restaurant_id', currentRestaurantId)
-        .neq('status', 'Entregado');
+        .from('orders').select(`*, order_items (*)`)
+        .eq('restaurant_id', currentRestaurantId).neq('status', 'Entregado');
 
     const container = document.getElementById('tables-list');
     if (error || !data || data.length === 0) {
@@ -128,7 +105,6 @@ async function loadTables() {
         return;
     }
 
-    // Agrupar por mesa
     const grouped = {};
     data.forEach(o => {
         if (!grouped[o.table_id]) grouped[o.table_id] = [];
@@ -152,9 +128,7 @@ async function loadTables() {
                                 ${o.order_items.map(i => `<li>${i.quantity}x ${i.item_name}</li>`).join('')}
                             </ul>
                         </div>
-                        <div style="text-align: right;">
-                            <span>$${Number(o.total).toLocaleString('es-AR')}</span>
-                        </div>
+                        <div style="text-align: right;"><span>$${Number(o.total).toLocaleString('es-AR')}</span></div>
                     </div>
                 `).join('')}
                 <div class="table-group" style="border-top: 2px solid #B22222; padding-top: 12px;">
@@ -166,9 +140,7 @@ async function loadTables() {
     }).join('');
 }
 
-// ============================================
 // RANKING
-// ============================================
 async function loadRanking() {
     const now = new Date();
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
@@ -184,15 +156,9 @@ async function loadRanking() {
         return;
     }
 
-    // Agrupar por nombre
     const counts = {};
-    data.forEach(i => {
-        counts[i.item_name] = (counts[i.item_name] || 0) + i.quantity;
-    });
-
-    const sorted = Object.entries(counts)
-        .sort((a, b) => b[1] - a[1])
-        .slice(0, 10);
+    data.forEach(i => { counts[i.item_name] = (counts[i.item_name] || 0) + i.quantity; });
+    const sorted = Object.entries(counts).sort((a, b) => b[1] - a[1]).slice(0, 10);
 
     document.getElementById('ranking-list').innerHTML = sorted.length === 0 
         ? '<p class="empty-msg">Sin pedidos este mes</p>'
@@ -202,23 +168,4 @@ async function loadRanking() {
                 <div><strong>${qty}</strong> pedidos</div>
             </div>
         `).join('');
-}
-// Nueva función para escuchar los llamados al mozo
-function subscribeToNotifications() {
-    supabaseClient
-        .channel('notificaciones-mozo')
-        .on('postgres_changes', 
-            { event: 'INSERT', schema: 'public', table: 'notifications' }, 
-            (payload) => {
-                if (payload.new.restaurant_id == currentRestaurantId) {
-                    // Sonar alarma
-                    const audio = new Audio('https://actions.google.com/sounds/v1/alarms/beep_short.ogg');
-                    audio.play();
-                    
-                    // Mostrar alerta visual
-                    alert(`🔔 ATENCIÓN: ${payload.new.message} en la Mesa ${payload.new.table_id}`);
-                }
-            }
-        )
-        .subscribe();
 }
