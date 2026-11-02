@@ -353,3 +353,34 @@ body {
     padding: 40px 20px; 
     font-style: italic;
 }
+/* Botón del carrito tipo elipse */
+.cart-badge {
+    width: auto !important;
+    min-width: 90px;
+    height: 45px !important;
+    padding: 0 20px;
+    border-radius: 25px; /* Hace la elipse */
+    font-size: 14px;
+}
+
+/* Aviso de pedido listo en el cliente */
+.order-ready-banner {
+    position: fixed;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #1E7A46;
+    color: white;
+    padding: 15px 30px;
+    border-radius: 10px;
+    font-weight: bold;
+    font-size: 18px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+    z-index: 1000;
+    display: none;
+    animation: bounce 1s infinite alternate;
+}
+@keyframes bounce {
+    from { transform: translateX(-50%) translateY(0); }
+    to { transform: translateX(-50%) translateY(-10px); }
+}
