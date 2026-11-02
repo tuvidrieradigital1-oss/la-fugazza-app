@@ -77,10 +77,10 @@ function updateCartBadge() {
     const totalItems = cart.reduce((sum, i) => sum + i.quantity, 0);
     if (totalItems > 0) {
         badge.classList.add('visible');
-        badge.innerText = totalItems;
+        // Cambiar a elipse con texto "Su pedido (X)"
+        badge.innerText = `Su pedido (${totalItems})`;
     } else {
         badge.classList.remove('visible');
-    }
 }
 
 function openCart() {
@@ -204,3 +204,32 @@ function showToast(message) {
     document.body.appendChild(toast);
     setTimeout(() => toast.remove(), 2000);
 }
+// Agrega esta función para escuchar el cambio de estado
+function escucharEstadoPedido(orderId) {
+    supabaseClient
+        .channel('cliente-' + orderId)
+        .on('postgres_changes', 
+            { event: 'UPDATE', schema: 'public', table: 'orders', filter: `id=eq.${orderId}` }, 
+            (payload) => {
+                if (payload.new.status === 'Listo') {
+                    // Mostrar cartel y sonar alarma
+                    const banner = document.createElement('div');
+                    banner.className = 'order-ready-banner';
+                    banner.innerText = '🚨 ¡Tu pedido está listo! 🚨';
+                    document.body.appendChild(banner);
+                    banner.style.display = 'block';
+                    
+                    // Sonido (asegúrate de tener un archivo alert.mp3 en assets o usa un link externo)
+                    const audio = new Audio('https://actions.google.com/sounds/v1/alarms/beep_short.ogg');
+                    audio.play();
+                    
+                    setTimeout(() => banner.remove(), 8000);
+                }
+            }
+        )
+        .subscribe();
+}
+
+// Modifica la función confirmOrder para llamar a escucharEstadoPedido
+// ... dentro de confirmOrder, después de insertar el pedido:
+// escucharEstadoPedido(orderData.id);
