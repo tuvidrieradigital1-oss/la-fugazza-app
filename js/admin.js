@@ -33,7 +33,12 @@ function initAdmin() {
     loadOrders();
     subscribeToOrders();
 }
-
+// Agrega esto en initAdmin()
+function initAdmin() {
+    loadOrders();
+    subscribeToOrders();
+    subscribeToNotifications(); // Nueva función
+}
 // ============================================
 // CARGAR PEDIDOS
 // ============================================
@@ -197,4 +202,23 @@ async function loadRanking() {
                 <div><strong>${qty}</strong> pedidos</div>
             </div>
         `).join('');
+}
+// Nueva función para escuchar los llamados al mozo
+function subscribeToNotifications() {
+    supabaseClient
+        .channel('notificaciones-mozo')
+        .on('postgres_changes', 
+            { event: 'INSERT', schema: 'public', table: 'notifications' }, 
+            (payload) => {
+                if (payload.new.restaurant_id == currentRestaurantId) {
+                    // Sonar alarma
+                    const audio = new Audio('https://actions.google.com/sounds/v1/alarms/beep_short.ogg');
+                    audio.play();
+                    
+                    // Mostrar alerta visual
+                    alert(`🔔 ATENCIÓN: ${payload.new.message} en la Mesa ${payload.new.table_id}`);
+                }
+            }
+        )
+        .subscribe();
 }
