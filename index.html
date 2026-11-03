@@ -15,6 +15,11 @@
         <div class="table-badge" id="table-info">Mesa 1</div>
     </div>
 
+    <!-- BOTÓN DE SEGUIMIENTO (Aparece cuando hace un pedido) -->
+    <div class="tracking-badge" id="tracking-badge" onclick="openTracking()">
+        🕒 Ver mi pedido
+    </div>
+
     <div class="tabs" id="category-tabs">
         <button class="tab active" onclick="filterMenu('Pizzas Tradicionales', this)">Pizzas Tradicionales</button>
         <button class="tab" onclick="filterMenu('Pizzas Especiales', this)">Pizzas Especiales</button>
@@ -23,12 +28,9 @@
         <button class="tab" onclick="filterMenu('Postres', this)">Postres</button>
     </div>
 
-    <div class="menu-grid" id="menu-container">
-        <p style="text-align: center; color: #999; padding: 20px;">Cargando menú...</p>
-    </div>
+    <div class="menu-grid" id="menu-container"></div>
 
-    <!-- CARRITO FLOTANTE -->
-    <div class="cart-badge" id="cart-badge" onclick="openCart()">0</div>
+    <div class="cart-badge" id="cart-badge" onclick="openCart()">Su pedido (0)</div>
 
     <!-- MODAL CARRITO -->
     <div class="modal-overlay" id="cart-modal">
@@ -56,6 +58,15 @@
             <p>Tu pedido ya está en cocina. Podés seguir pidiendo.</p>
             <button class="btn-primary" onclick="closeSuccess()">Perfecto</button>
         </div>
+    </div>
+
+    <!-- PANEL DE SEGUIMIENTO (Pantalla completa) -->
+    <div class="tracking-panel" id="tracking-panel">
+        <h2>Estado de tu pedido</h2>
+        <div class="tracking-status" id="tracking-status">Cargando...</div>
+        <p>Tiempo estimado restante:</p>
+        <div class="tracking-timer" id="tracking-timer">--:--</div>
+        <button class="tracking-close" onclick="closeTracking()">Volver al menú</button>
     </div>
 
     <div class="footer">
