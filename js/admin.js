@@ -4,6 +4,7 @@
 let currentRestaurantId = 1;
 let realtimeChannel = null;
 let notificationsChannel = null;
+let alertsArray = []; // Para guardar las alertas en pantalla
 
 function login() {
     const email = document.getElementById('email').value;
@@ -25,9 +26,52 @@ function logout() {
 function initAdmin() {
     loadOrders();
     subscribeToOrders();
-    subscribeToNotifications(); // <--- ESTO FALTABA: ¡Ahora sí escucha los botones del cliente!
+    subscribeToNotifications(); 
 }
 
+// --- NOTIFICACIONES ---
+function addAlertToUI(text) {
+    const container = document.getElementById('admin-alerts-container');
+    const list = document.getElementById('admin-alerts-list');
+    
+    container.style.display = 'block';
+    
+    const alertDiv = document.createElement('div');
+    alertDiv.style.cssText = "background: white; padding: 10px; margin-bottom: 8px; border-radius: 5px; font-weight: bold; color: #B22222; border-left: 4px solid #B22222;";
+    alertDiv.innerText = `🔔 ${text}`;
+    
+    list.appendChild(alertDiv);
+    alertsArray.push(alertDiv);
+
+    // Auto-eliminar la alerta después de 2 minutos para no saturar
+    setTimeout(() => {
+        if(alertDiv.parentNode) alertDiv.parentNode.removeChild(alertDiv);
+        if(list.children.length === 0) container.style.display = 'none';
+    }, 120000);
+}
+
+function clearAlerts() {
+    document.getElementById('admin-alerts-list').innerHTML = '';
+    document.getElementById('admin-alerts-container').style.display = 'none';
+}
+
+function subscribeToNotifications() {
+    notificationsChannel = supabaseClient.channel('notificaciones-mozo')
+        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'notifications' }, (payload) => {
+            if (payload.new.restaurant_id == currentRestaurantId) {
+                
+                // 1. Sonido de alerta
+                const audio = new Audio('https://actions.google.com/sounds/v1/alarms/beep_short.ogg');
+                audio.play().catch(e => console.log("El navegador bloqueó el audio."));
+                
+                // 2. Mostrar en pantalla
+                const mensaje = `${payload.new.message} en la Mesa ${payload.new.table_id}`;
+                addAlertToUI(mensaje);
+            }
+        }).subscribe();
+}
+
+// --- PEDIDOS ---
 async function loadOrders() {
     const { data, error } = await supabaseClient
         .from('orders').select(`*, order_items (*)`)
@@ -88,22 +132,7 @@ function subscribeToOrders() {
         .subscribe();
 }
 
-// ESCUCHAR LOS LLAMADOS AL MOZO (CORREGIDO)
-function subscribeToNotifications() {
-    notificationsChannel = supabaseClient.channel('notificaciones-mozo')
-        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'notifications' }, (payload) => {
-            if (payload.new.restaurant_id == currentRestaurantId) {
-                // Sonido de alerta
-                const audio = new Audio('https://actions.google.com/sounds/v1/alarms/beep_short.ogg');
-                audio.play().catch(e => console.log("El navegador bloqueó el audio."));
-                
-                // Alerta visual del navegador
-                alert(`🔔 ATENCIÓN: ${payload.new.message} en la Mesa ${payload.new.table_id}`);
-            }
-        }).subscribe();
-}
-
-// MESAS
+// --- MESAS Y RANKING (Sin cambios) ---
 async function loadTables() {
     const { data, error } = await supabaseClient.from('orders').select(`*, order_items (*)`).eq('restaurant_id', currentRestaurantId).neq('status', 'Entregado');
     const container = document.getElementById('tables-list');
