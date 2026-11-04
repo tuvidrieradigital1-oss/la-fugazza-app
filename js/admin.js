@@ -4,7 +4,6 @@
 let currentRestaurantId = 1;
 let realtimeChannel = null;
 let notificationsChannel = null;
-let alertsArray = []; // Para guardar las alertas en pantalla
 
 function login() {
     const email = document.getElementById('email').value;
@@ -29,19 +28,18 @@ function initAdmin() {
     subscribeToNotifications(); 
 }
 
-// --- NOTIFICACIONES ---
+// --- NUEVO SISTEMA DE NOTIFICACIONES VISUALES ---
 function addAlertToUI(text) {
     const container = document.getElementById('admin-alerts-container');
     const list = document.getElementById('admin-alerts-list');
     
-    container.style.display = 'block';
+    container.style.display = 'block'; // Mostrar el cuadro amarillo
     
     const alertDiv = document.createElement('div');
     alertDiv.style.cssText = "background: white; padding: 10px; margin-bottom: 8px; border-radius: 5px; font-weight: bold; color: #B22222; border-left: 4px solid #B22222;";
     alertDiv.innerText = `🔔 ${text}`;
     
     list.appendChild(alertDiv);
-    alertsArray.push(alertDiv);
 
     // Auto-eliminar la alerta después de 2 minutos para no saturar
     setTimeout(() => {
@@ -132,7 +130,7 @@ function subscribeToOrders() {
         .subscribe();
 }
 
-// --- MESAS Y RANKING (Sin cambios) ---
+// --- MESAS Y RANKING ---
 async function loadTables() {
     const { data, error } = await supabaseClient.from('orders').select(`*, order_items (*)`).eq('restaurant_id', currentRestaurantId).neq('status', 'Entregado');
     const container = document.getElementById('tables-list');
