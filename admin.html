@@ -24,6 +24,13 @@
             <button onclick="logout()" style="background: #333; color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor:pointer;">Salir</button>
         </div>
 
+        <!-- NUEVO: Contenedor de Notificaciones (oculto por defecto) -->
+        <div id="admin-alerts-container" style="display: none; background: #FFF3CD; border: 2px solid #FFCA2C; color: #856404; padding: 15px; border-radius: 10px; margin-bottom: 20px; animation: bounce 1s infinite alternate;">
+            <h3 style="margin: 0 0 10px 0;">🔔 NOTIFICACIONES RECIENTES</h3>
+            <div id="admin-alerts-list"></div>
+            <button onclick="clearAlerts()" style="margin-top: 10px; background: #333; color: white; border: none; padding: 5px 10px; border-radius: 5px; cursor: pointer; font-size: 12px;">Limpiar alertas</button>
+        </div>
+
         <div class="admin-tabs">
             <button class="admin-tab active" onclick="showTab('orders', this)">📋 Pedidos</button>
             <button class="admin-tab" onclick="showTab('tables', this); loadTables();">🪑 Mesas</button>
