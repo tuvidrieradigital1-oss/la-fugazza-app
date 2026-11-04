@@ -36,7 +36,7 @@ function addAlertToUI(text) {
     container.style.display = 'block'; // Mostrar el cuadro amarillo
     
     const alertDiv = document.createElement('div');
-    alertDiv.style.cssText = "background: white; padding: 10px; margin-bottom: 8px; border-radius: 5px; font-weight: bold; color: #B22222; border-left: 4px solid #B22222;";
+    alertDiv.style.cssText = "background: white; padding: 10px; margin-bottom: 8px; border-radius: 5px; font-weight: bold; color: black; border-left: 4px solid #B22222; font-size: 14px;";
     alertDiv.innerText = `🔔 ${text}`;
     
     list.appendChild(alertDiv);
