@@ -33,13 +33,26 @@ function addAlertToUI(text) {
     const container = document.getElementById('admin-alerts-container');
     const list = document.getElementById('admin-alerts-list');
     
-    container.style.display = 'block'; // Mostrar el cuadro amarillo
+    container.style.display = 'block'; 
     
     const alertDiv = document.createElement('div');
-    alertDiv.style.cssText = "background: white; padding: 10px; margin-bottom: 8px; border-radius: 5px; font-weight: bold; color: black; border-left: 4px solid #B22222; font-size: 14px;";
-    alertDiv.innerText = `🔔 ${text}`;
+    // Forzamos los estilos con un borde rojo y fondo blanco
+    alertDiv.style.border = "1px solid #ccc";
+    alertDiv.style.background = "white";
+    alertDiv.style.padding = "10px";
+    alertDiv.style.marginBottom = "5px";
+    alertDiv.style.borderLeft = "4px solid #B22222";
+    alertDiv.style.color = "black"; // Texto negro garantizado
+    alertDiv.style.fontWeight = "bold";
     
+    alertDiv.innerText = `🔔 ${text}`;
     list.appendChild(alertDiv);
+
+    setTimeout(() => {
+        if(alertDiv.parentNode) alertDiv.parentNode.removeChild(alertDiv);
+        if(list.children.length === 0) container.style.display = 'none';
+    }, 120000);
+}
 
     setTimeout(() => {
         if(alertDiv.parentNode) alertDiv.parentNode.removeChild(alertDiv);
