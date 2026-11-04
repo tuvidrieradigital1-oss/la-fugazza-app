@@ -28,7 +28,7 @@ function initAdmin() {
     subscribeToNotifications(); 
 }
 
-// --- NUEVO SISTEMA DE NOTIFICACIONES VISUALES ---
+// --- SISTEMA DE NOTIFICACIONES VISUALES ---
 function addAlertToUI(text) {
     const container = document.getElementById('admin-alerts-container');
     const list = document.getElementById('admin-alerts-list');
@@ -41,7 +41,6 @@ function addAlertToUI(text) {
     
     list.appendChild(alertDiv);
 
-    // Auto-eliminar la alerta después de 2 minutos para no saturar
     setTimeout(() => {
         if(alertDiv.parentNode) alertDiv.parentNode.removeChild(alertDiv);
         if(list.children.length === 0) container.style.display = 'none';
@@ -54,19 +53,25 @@ function clearAlerts() {
 }
 
 function subscribeToNotifications() {
+    // Si ya había un canal abierto, lo cerramos para no duplicar
+    if (notificationsChannel) supabaseClient.removeChannel(notificationsChannel);
+
     notificationsChannel = supabaseClient.channel('notificaciones-mozo')
         .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'notifications' }, (payload) => {
+            console.log("¡Notificación recibida!", payload); // Para debug en consola
             if (payload.new.restaurant_id == currentRestaurantId) {
                 
                 // 1. Sonido de alerta
                 const audio = new Audio('https://actions.google.com/sounds/v1/alarms/beep_short.ogg');
-                audio.play().catch(e => console.log("El navegador bloqueó el audio."));
+                audio.play().catch(e => console.log("El navegador bloqueó el audio hasta que hagas clic en la pantalla."));
                 
                 // 2. Mostrar en pantalla
                 const mensaje = `${payload.new.message} en la Mesa ${payload.new.table_id}`;
                 addAlertToUI(mensaje);
             }
-        }).subscribe();
+        }).subscribe((status) => {
+            console.log("Estado de conexión de notificaciones:", status);
+        });
 }
 
 // --- PEDIDOS ---
@@ -125,6 +130,7 @@ async function updateOrderStatus(orderId, newStatus) {
 }
 
 function subscribeToOrders() {
+    if (realtimeChannel) supabaseClient.removeChannel(realtimeChannel);
     realtimeChannel = supabaseClient.channel('orders-realtime')
         .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, (payload) => { loadOrders(); })
         .subscribe();
