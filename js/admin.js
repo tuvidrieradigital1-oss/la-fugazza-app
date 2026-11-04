@@ -1,5 +1,5 @@
 // ============================================
-// LÓGICA DEL ADMIN (VERSIÓN LIMPIA Y VERIFICADA)
+// LÓGICA DEL ADMIN (VERSIÓN FINAL)
 // ============================================
 let currentRestaurantId = 1;
 let realtimeChannel = null;
@@ -37,15 +37,10 @@ function addAlertToUI(text) {
     container.style.display = 'block'; 
     
     const alertDiv = document.createElement('div');
-    alertDiv.style.border = "1px solid #ccc";
-    alertDiv.style.background = "white";
-    alertDiv.style.padding = "10px";
-    alertDiv.style.marginBottom = "5px";
-    alertDiv.style.borderLeft = "4px solid #B22222";
-    alertDiv.style.color = "black"; 
-    alertDiv.style.fontWeight = "bold";
-    
     alertDiv.innerText = `🔔 ${text}`;
+    alertDiv.style.borderBottom = "1px solid #ccc";
+    alertDiv.style.padding = "10px";
+    
     list.appendChild(alertDiv);
 
     setTimeout(() => {
@@ -64,6 +59,7 @@ function subscribeToNotifications() {
     notificationsChannel = supabaseClient.channel('notificaciones-mozo')
         .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'notifications' }, (payload) => {
             if (payload.new.restaurant_id == currentRestaurantId) {
+                // Intentar reproducir sonido (el navegador lo permite si el usuario ya hizo clic)
                 const audio = new Audio('https://actions.google.com/sounds/v1/alarms/beep_short.ogg');
                 audio.play().catch(e => console.log("Audio bloqueado."));
                 addAlertToUI(`${payload.new.message} en la Mesa ${payload.new.table_id}`);
