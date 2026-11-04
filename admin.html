@@ -24,7 +24,7 @@
             <button onclick="logout()" style="background: #333; color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor:pointer;">Salir</button>
         </div>
 
-        <!-- NUEVO: Contenedor de Notificaciones (Siempre visible si hay alertas) -->
+        <!-- CONTENEDOR DE NOTIFICACIONES -->
         <div id="admin-alerts-container" style="display: none; background: #FFF3CD; border: 2px solid #FFCA2C; color: #856404; padding: 15px; border-radius: 10px; margin-bottom: 20px; animation: bounce 1s infinite alternate;">
             <h3 style="margin: 0 0 10px 0;">🔔 NOTIFICACIONES RECIENTES</h3>
             <div id="admin-alerts-list"></div>
@@ -37,19 +37,16 @@
             <button class="admin-tab" onclick="showTab('ranking', this); loadRanking();">🏆 Ranking</button>
         </div>
 
-        <!-- Pedidos -->
         <div id="tab-orders" class="tab-content active">
             <h2>Pedidos en Tiempo Real</h2>
             <div id="orders-list"><p class="empty-msg">Cargando...</p></div>
         </div>
 
-        <!-- Mesas -->
         <div id="tab-tables" class="tab-content">
             <h2>Mesas Activas</h2>
             <div id="tables-list"><p class="empty-msg">Cargando...</p></div>
         </div>
 
-        <!-- Ranking -->
         <div id="tab-ranking" class="tab-content">
             <h2>🏆 Ranking del Mes</h2>
             <div id="ranking-list" class="card"><p class="empty-msg">Cargando...</p></div>
