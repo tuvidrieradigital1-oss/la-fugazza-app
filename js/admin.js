@@ -1,5 +1,5 @@
 // ============================================
-// LÓGICA DEL ADMIN
+// LÓGICA DEL ADMIN (VERSIÓN LIMPIA Y VERIFICADA)
 // ============================================
 let currentRestaurantId = 1;
 let realtimeChannel = null;
@@ -12,7 +12,9 @@ function login() {
         document.getElementById('login-screen').style.display = 'none';
         document.getElementById('dashboard').style.display = 'block';
         initAdmin();
-    } else { alert('Credenciales incorrectas'); }
+    } else { 
+        alert('Credenciales incorrectas'); 
+    }
 }
 
 function logout() {
@@ -28,31 +30,23 @@ function initAdmin() {
     subscribeToNotifications(); 
 }
 
-// --- SISTEMA DE NOTIFICACIONES VISUALES ---
+// --- SISTEMA DE NOTIFICACIONES ---
 function addAlertToUI(text) {
     const container = document.getElementById('admin-alerts-container');
     const list = document.getElementById('admin-alerts-list');
-    
     container.style.display = 'block'; 
     
     const alertDiv = document.createElement('div');
-    // Forzamos los estilos con un borde rojo y fondo blanco
     alertDiv.style.border = "1px solid #ccc";
     alertDiv.style.background = "white";
     alertDiv.style.padding = "10px";
     alertDiv.style.marginBottom = "5px";
     alertDiv.style.borderLeft = "4px solid #B22222";
-    alertDiv.style.color = "black"; // Texto negro garantizado
+    alertDiv.style.color = "black"; 
     alertDiv.style.fontWeight = "bold";
     
     alertDiv.innerText = `🔔 ${text}`;
     list.appendChild(alertDiv);
-
-    setTimeout(() => {
-        if(alertDiv.parentNode) alertDiv.parentNode.removeChild(alertDiv);
-        if(list.children.length === 0) container.style.display = 'none';
-    }, 120000);
-}
 
     setTimeout(() => {
         if(alertDiv.parentNode) alertDiv.parentNode.removeChild(alertDiv);
@@ -66,25 +60,15 @@ function clearAlerts() {
 }
 
 function subscribeToNotifications() {
-    // Si ya había un canal abierto, lo cerramos para no duplicar
     if (notificationsChannel) supabaseClient.removeChannel(notificationsChannel);
-
     notificationsChannel = supabaseClient.channel('notificaciones-mozo')
         .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'notifications' }, (payload) => {
-            console.log("¡Notificación recibida!", payload); // Para debug en consola
             if (payload.new.restaurant_id == currentRestaurantId) {
-                
-                // 1. Sonido de alerta
                 const audio = new Audio('https://actions.google.com/sounds/v1/alarms/beep_short.ogg');
-                audio.play().catch(e => console.log("El navegador bloqueó el audio hasta que hagas clic en la pantalla."));
-                
-                // 2. Mostrar en pantalla
-                const mensaje = `${payload.new.message} en la Mesa ${payload.new.table_id}`;
-                addAlertToUI(mensaje);
+                audio.play().catch(e => console.log("Audio bloqueado."));
+                addAlertToUI(`${payload.new.message} en la Mesa ${payload.new.table_id}`);
             }
-        }).subscribe((status) => {
-            console.log("Estado de conexión de notificaciones:", status);
-        });
+        }).subscribe();
 }
 
 // --- PEDIDOS ---
