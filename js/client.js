@@ -16,6 +16,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('table-info').innerText = `Mesa ${tableId} - ${customerName}`;
     loadMenu(currentCategory);
     
+    // Recuperar pedido si se recarga la página
     const savedOrderId = localStorage.getItem(`order_${tableId}`);
     if (savedOrderId) {
         currentOrderId = savedOrderId;
@@ -141,7 +142,7 @@ async function confirmOrder() {
 
 function closeSuccess() { document.getElementById('success-modal').classList.remove('active'); }
 
-// --- SEGUIMIENTO Y TEMPORIZADOR ---
+// --- SEGUIMIENTO Y TEMPORIZADOR (CORREGIDO) ---
 function showTrackingBadge() { document.getElementById('tracking-badge').classList.add('active'); }
 function openTracking() { document.getElementById('tracking-panel').classList.add('active'); }
 function closeTracking() { document.getElementById('tracking-panel').classList.remove('active'); }
@@ -153,17 +154,24 @@ function updateTrackingUI(status, estimatedMinutes, createdAt) {
     statusEl.innerText = `Estado: ${status}`;
     timerEl.style.color = "#1E7A46";
 
+    // 1. SI ESTÁ LISTO: Frenar reloj, vibrar y mostrar cartel
     if (status === 'Listo') {
-        if (timerInterval) clearInterval(timerInterval); 
+        if (timerInterval) clearInterval(timerInterval); // <--- FRENA EL RELOJ DEFINITIVAMENTE
         timerEl.innerText = "¡LISTO!";
         timerEl.style.color = "#B22222"; 
         statusEl.innerText = "¡Tu pedido está listo! Pronto será entregado.";
+        
+        // Vibrar el celular
         if (navigator.vibrate) { navigator.vibrate([500, 200, 500, 200, 500]); }
+        
+    // 2. SI YA SE ENTREGÓ: Frenar reloj
     } else if (status === 'Entregado') {
-        if (timerInterval) clearInterval(timerInterval);
+        if (timerInterval) clearInterval(timerInterval); // <--- FRENA EL RELOJ
         timerEl.innerText = "Entregado";
         timerEl.style.color = "#333";
         statusEl.innerText = "¡Buen provecho!";
+        
+    // 3. SI ESTÁ PENDIENTE O EN COCINA: Arrancar el reloj
     } else {
         const orderTime = new Date(createdAt).getTime();
         targetTime = orderTime + (estimatedMinutes * 60000);
@@ -191,7 +199,9 @@ function startTimer() {
     }, 1000);
 }
 
+// ESCUCHAR CAMBIOS EN TIEMPO REAL
 function escucharEstadoPedido(orderId) {
+    // Primero traemos los datos actuales para iniciar el timer
     supabaseClient.from('orders').select('*').eq('id', orderId).single().then(({data}) => {
         if(data) updateTrackingUI(data.status, data.estimated_minutes || 20, data.created_at);
     });
@@ -205,15 +215,18 @@ function escucharEstadoPedido(orderId) {
                 const newMinutes = payload.new.estimated_minutes;
                 const createdAt = payload.new.created_at;
                 
+                // Actualizamos la UI (esto frena el reloj si está Listo)
                 updateTrackingUI(newStatus, newMinutes, createdAt);
 
                 if (newStatus === 'Listo') {
+                    // Mostrar el banner verde flotante por 10 segundos
                     const banner = document.createElement('div');
                     banner.className = 'order-ready-banner';
                     banner.innerHTML = '🚨 ¡Tu pedido está listo! 🚨<br><small>El mozo lo está llevando a tu mesa.</small>';
                     document.body.appendChild(banner);
                     banner.style.display = 'block';
                     
+                    // Sonido de alarma
                     const audio = new Audio('https://actions.google.com/sounds/v1/alarms/beep_short.ogg');
                     audio.play().catch(e => console.log("Audio bloqueado."));
                     
@@ -223,11 +236,10 @@ function escucharEstadoPedido(orderId) {
         ).subscribe();
 }
 
-// NOTIFICAR AL MOZO (CORREGIDO)
+// NOTIFICAR AL MOZO
 async function callWaiter(action) {
     const message = action === 'call' ? 'Mozo solicitado' : 'Cuenta solicitada';
     
-    // Deshabilitar temporalmente el botón para evitar doble clic
     const btn = event.target;
     const originalText = btn.innerText;
     btn.disabled = true;
@@ -243,7 +255,6 @@ async function callWaiter(action) {
         showToast(`🔔 ${message}. El mozo está en camino.`);
     }
 
-    // Restaurar el botón después de 3 segundos
     setTimeout(() => {
         btn.disabled = false;
         btn.innerText = originalText;
