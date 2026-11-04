@@ -15,6 +15,7 @@ let targetTime = null;
 document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('table-info').innerText = `Mesa ${tableId} - ${customerName}`;
     loadMenu(currentCategory);
+    
     // Recuperar pedido si se recarga la página
     const savedOrderId = localStorage.getItem(`order_${tableId}`);
     if (savedOrderId) {
@@ -130,7 +131,7 @@ async function confirmOrder() {
     await supabaseClient.from('order_items').insert(items);
 
     currentOrderId = orderData.id;
-    localStorage.setItem(`order_${tableId}`, currentOrderId); // Guardamos para que no se pierda si recarga
+    localStorage.setItem(`order_${tableId}`, currentOrderId); 
 
     cart = []; updateCartBadge(); closeCart();
     document.getElementById('success-modal').classList.add('active');
@@ -159,16 +160,26 @@ function updateTrackingUI(status, estimatedMinutes, createdAt) {
     const timerEl = document.getElementById('tracking-timer');
     
     statusEl.innerText = `Estado: ${status}`;
+    timerEl.style.color = "#1E7A46"; // Volver a verde por defecto
 
     if (status === 'Listo') {
+        // DETENER EL RELOJ Y MOSTRAR ALERTA
+        if (timerInterval) clearInterval(timerInterval); 
         timerEl.innerText = "¡LISTO!";
-        timerEl.style.color = "#1E7A46";
-        statusEl.innerText = "¡Tu pedido está listo! El mozo lo está llevando.";
+        timerEl.style.color = "#B22222"; // Rojo para llamar la atención
+        statusEl.innerText = "¡Tu pedido está listo! Pronto será entregado.";
+        
+        // Vibración (si el celular lo soporta)
+        if (navigator.vibrate) {
+            navigator.vibrate([500, 200, 500, 200, 500]); // Patrón de vibración
+        }
     } else if (status === 'Entregado') {
+        if (timerInterval) clearInterval(timerInterval);
         timerEl.innerText = "Entregado";
+        timerEl.style.color = "#333";
         statusEl.innerText = "¡Buen provecho!";
     } else {
-        // Calcular tiempo
+        // Si el estado es Pendiente o En Cocina, calculamos el tiempo
         const orderTime = new Date(createdAt).getTime();
         targetTime = orderTime + (estimatedMinutes * 60000);
         startTimer();
@@ -211,16 +222,21 @@ function escucharEstadoPedido(orderId) {
                 const newMinutes = payload.new.estimated_minutes;
                 const createdAt = payload.new.created_at;
                 
+                // Actualizamos la UI (esto frena el reloj si está Listo)
                 updateTrackingUI(newStatus, newMinutes, createdAt);
 
                 if (newStatus === 'Listo') {
+                    // Mostrar el banner verde flotante por 10 segundos
                     const banner = document.createElement('div');
                     banner.className = 'order-ready-banner';
                     banner.innerHTML = '🚨 ¡Tu pedido está listo! 🚨<br><small>El mozo lo está llevando a tu mesa.</small>';
                     document.body.appendChild(banner);
                     banner.style.display = 'block';
+                    
+                    // Sonido de alarma
                     const audio = new Audio('https://actions.google.com/sounds/v1/alarms/beep_short.ogg');
                     audio.play().catch(e => console.log("Audio bloqueado."));
+                    
                     setTimeout(() => banner.remove(), 10000);
                 }
             }
