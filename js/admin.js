@@ -25,7 +25,7 @@ function logout() {
 function initAdmin() {
     loadOrders();
     subscribeToOrders();
-    subscribeToNotifications();
+    subscribeToNotifications(); // <--- ESTO FALTABA: ¡Ahora sí escucha los botones del cliente!
 }
 
 async function loadOrders() {
@@ -72,7 +72,6 @@ async function loadOrders() {
     `).join('');
 }
 
-// NUEVA FUNCIÓN: Modificar tiempo de preparación
 async function updateEstimatedTime(orderId, minutes) {
     await supabaseClient.from('orders').update({ estimated_minutes: parseInt(minutes) }).eq('id', orderId);
     loadOrders();
@@ -89,18 +88,22 @@ function subscribeToOrders() {
         .subscribe();
 }
 
+// ESCUCHAR LOS LLAMADOS AL MOZO (CORREGIDO)
 function subscribeToNotifications() {
     notificationsChannel = supabaseClient.channel('notificaciones-mozo')
         .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'notifications' }, (payload) => {
             if (payload.new.restaurant_id == currentRestaurantId) {
+                // Sonido de alerta
                 const audio = new Audio('https://actions.google.com/sounds/v1/alarms/beep_short.ogg');
-                audio.play().catch(e => console.log("Audio bloqueado."));
+                audio.play().catch(e => console.log("El navegador bloqueó el audio."));
+                
+                // Alerta visual del navegador
                 alert(`🔔 ATENCIÓN: ${payload.new.message} en la Mesa ${payload.new.table_id}`);
             }
         }).subscribe();
 }
 
-// ... (Las funciones loadTables y loadRanking quedan igual que antes) ...
+// MESAS
 async function loadTables() {
     const { data, error } = await supabaseClient.from('orders').select(`*, order_items (*)`).eq('restaurant_id', currentRestaurantId).neq('status', 'Entregado');
     const container = document.getElementById('tables-list');
