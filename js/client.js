@@ -16,7 +16,6 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('table-info').innerText = `Mesa ${tableId} - ${customerName}`;
     loadMenu(currentCategory);
     
-    // Recuperar pedido si se recarga la página
     const savedOrderId = localStorage.getItem(`order_${tableId}`);
     if (savedOrderId) {
         currentOrderId = savedOrderId;
@@ -70,7 +69,7 @@ function changeQuantity(id, delta) {
     if (item) {
         item.quantity += delta;
         if (item.quantity <= 0) cart = cart.filter(i => i.id !== id);
-        openCart(); // Refresca el modal
+        openCart(); 
         updateCartBadge();
     }
 }
@@ -143,43 +142,29 @@ async function confirmOrder() {
 function closeSuccess() { document.getElementById('success-modal').classList.remove('active'); }
 
 // --- SEGUIMIENTO Y TEMPORIZADOR ---
-function showTrackingBadge() {
-    document.getElementById('tracking-badge').classList.add('active');
-}
-
-function openTracking() {
-    document.getElementById('tracking-panel').classList.add('active');
-}
-
-function closeTracking() {
-    document.getElementById('tracking-panel').classList.remove('active');
-}
+function showTrackingBadge() { document.getElementById('tracking-badge').classList.add('active'); }
+function openTracking() { document.getElementById('tracking-panel').classList.add('active'); }
+function closeTracking() { document.getElementById('tracking-panel').classList.remove('active'); }
 
 function updateTrackingUI(status, estimatedMinutes, createdAt) {
     const statusEl = document.getElementById('tracking-status');
     const timerEl = document.getElementById('tracking-timer');
     
     statusEl.innerText = `Estado: ${status}`;
-    timerEl.style.color = "#1E7A46"; // Volver a verde por defecto
+    timerEl.style.color = "#1E7A46";
 
     if (status === 'Listo') {
-        // DETENER EL RELOJ Y MOSTRAR ALERTA
         if (timerInterval) clearInterval(timerInterval); 
         timerEl.innerText = "¡LISTO!";
-        timerEl.style.color = "#B22222"; // Rojo para llamar la atención
+        timerEl.style.color = "#B22222"; 
         statusEl.innerText = "¡Tu pedido está listo! Pronto será entregado.";
-        
-        // Vibración (si el celular lo soporta)
-        if (navigator.vibrate) {
-            navigator.vibrate([500, 200, 500, 200, 500]); // Patrón de vibración
-        }
+        if (navigator.vibrate) { navigator.vibrate([500, 200, 500, 200, 500]); }
     } else if (status === 'Entregado') {
         if (timerInterval) clearInterval(timerInterval);
         timerEl.innerText = "Entregado";
         timerEl.style.color = "#333";
         statusEl.innerText = "¡Buen provecho!";
     } else {
-        // Si el estado es Pendiente o En Cocina, calculamos el tiempo
         const orderTime = new Date(createdAt).getTime();
         targetTime = orderTime + (estimatedMinutes * 60000);
         startTimer();
@@ -206,9 +191,7 @@ function startTimer() {
     }, 1000);
 }
 
-// ESCUCHAR CAMBIOS EN TIEMPO REAL
 function escucharEstadoPedido(orderId) {
-    // Primero traemos los datos actuales para iniciar el timer
     supabaseClient.from('orders').select('*').eq('id', orderId).single().then(({data}) => {
         if(data) updateTrackingUI(data.status, data.estimated_minutes || 20, data.created_at);
     });
@@ -222,18 +205,15 @@ function escucharEstadoPedido(orderId) {
                 const newMinutes = payload.new.estimated_minutes;
                 const createdAt = payload.new.created_at;
                 
-                // Actualizamos la UI (esto frena el reloj si está Listo)
                 updateTrackingUI(newStatus, newMinutes, createdAt);
 
                 if (newStatus === 'Listo') {
-                    // Mostrar el banner verde flotante por 10 segundos
                     const banner = document.createElement('div');
                     banner.className = 'order-ready-banner';
                     banner.innerHTML = '🚨 ¡Tu pedido está listo! 🚨<br><small>El mozo lo está llevando a tu mesa.</small>';
                     document.body.appendChild(banner);
                     banner.style.display = 'block';
                     
-                    // Sonido de alarma
                     const audio = new Audio('https://actions.google.com/sounds/v1/alarms/beep_short.ogg');
                     audio.play().catch(e => console.log("Audio bloqueado."));
                     
@@ -243,17 +223,37 @@ function escucharEstadoPedido(orderId) {
         ).subscribe();
 }
 
-// NOTIFICAR AL MOZO
+// NOTIFICAR AL MOZO (CORREGIDO)
 async function callWaiter(action) {
     const message = action === 'call' ? 'Mozo solicitado' : 'Cuenta solicitada';
-    await supabaseClient.from('notifications').insert({ restaurant_id: restaurantId, table_id: tableId, type: action, message: message });
-    showToast(`🔔 ${message}`);
+    
+    // Deshabilitar temporalmente el botón para evitar doble clic
+    const btn = event.target;
+    const originalText = btn.innerText;
+    btn.disabled = true;
+    btn.innerText = "Enviando...";
+
+    const { error } = await supabaseClient
+        .from('notifications')
+        .insert({ restaurant_id: restaurantId, table_id: tableId, type: action, message: message });
+    
+    if (error) {
+        alert("Error al enviar la notificación: " + error.message);
+    } else {
+        showToast(`🔔 ${message}. El mozo está en camino.`);
+    }
+
+    // Restaurar el botón después de 3 segundos
+    setTimeout(() => {
+        btn.disabled = false;
+        btn.innerText = originalText;
+    }, 3000);
 }
 
 function showToast(message) {
     const toast = document.createElement('div');
-    toast.style.cssText = `position: fixed; bottom: 140px; left: 50%; transform: translateX(-50%); background: #333; color: white; padding: 10px 20px; border-radius: 20px; font-size: 14px; z-index: 999;`;
+    toast.style.cssText = `position: fixed; bottom: 140px; left: 50%; transform: translateX(-50%); background: #333; color: white; padding: 10px 20px; border-radius: 20px; font-size: 14px; z-index: 999; text-align: center; box-shadow: 0 4px 10px rgba(0,0,0,0.3);`;
     toast.innerText = message;
     document.body.appendChild(toast);
-    setTimeout(() => toast.remove(), 2000);
+    setTimeout(() => toast.remove(), 3000);
 }
